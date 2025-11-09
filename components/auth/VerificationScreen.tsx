@@ -24,9 +24,9 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ identifier, onV
     <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-lg dark:bg-slate-800">
         <div className="text-center">
-           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Vérifiez votre identité</h2>
+           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Confirmez votre connexion</h2>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Un code à 6 chiffres a été envoyé à <strong className="font-medium text-emerald-600 dark:text-emerald-400">{identifier}</strong>.
+            Pour votre sécurité, un code à 6 chiffres a été envoyé à vos contacts enregistrés (email/téléphone).
           </p>
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>
@@ -56,7 +56,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ identifier, onV
               type="submit"
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-transform transform hover:scale-105"
             >
-              Vérifier
+              Vérifier et Se Connecter
             </button>
           </div>
         </form>

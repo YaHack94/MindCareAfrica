@@ -4,6 +4,13 @@ export type NavigationItem = 'dashboard' | 'chat' | 'journal' | 'resources' | 'c
 export interface User {
   id: string; // email or phone number
   pseudonym: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dob: string;
+  country: string;
+  pin: string; // NOTE: Storing PIN in plaintext is insecure. For demo purposes only.
 }
 
 export interface Message {
@@ -37,7 +44,9 @@ export interface ForumPost {
     title: string;
     content: string;
     timestamp: string;
+    date: string; // For sorting
     replies: number;
+    category: 'Gestion du stress' | 'Petites victoires' | 'Relations' | 'Soutien';
 }
 
 export interface Psychologist {

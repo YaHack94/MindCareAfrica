@@ -21,20 +21,23 @@ const App: React.FC = () => {
 
   // State for the new authentication flow
   const [authStep, setAuthStep] = useState<'auth' | 'verify' | 'profile'>('auth');
-  const [authIdentifier, setAuthIdentifier] = useState(''); // Stores email or phone
+  const [authIdentifier, setAuthIdentifier] = useState(''); // Stores email or phone for verification
+  const [tempSignupData, setTempSignupData] = useState<Omit<User, 'id' | 'pseudonym'> | null>(null);
   const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDark = theme === 'dark';
-    root.classList.remove(isDark ? 'light' : 'dark');
-    root.classList.add(theme);
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
   }, [theme]);
 
   // Register Service Worker
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/service-worker.js')
+      navigator.serviceWorker.register('./service-worker.js')
         .then(swReg => {
           console.log('Service Worker registered:', swReg);
         })
@@ -52,31 +55,56 @@ const App: React.FC = () => {
     setShowLanding(false);
   };
 
-  const handleIdentifierSubmit = (identifier: string) => {
-    setAuthIdentifier(identifier);
-    setAuthStep('verify');
-  };
-  
-  const handleVerificationSuccess = () => {
+  const handleSignup = (data: Omit<User, 'id' | 'pseudonym'>) => {
+    setTempSignupData(data);
     setAuthStep('profile');
   };
 
+  const handleLogin = (identifier: string, pin: string) => {
+    const storedUser: User | null = JSON.parse(localStorage.getItem('mindcare-user') || 'null');
+    
+    if (storedUser && (storedUser.email === identifier || storedUser.phone === identifier || storedUser.pseudonym === identifier) && storedUser.pin === pin) {
+        setAuthIdentifier(identifier);
+        setAuthStep('verify');
+    } else {
+        alert("Identifiant ou code PIN incorrect.");
+    }
+  };
+  
+  const handleVerificationSuccess = () => {
+    const storedUser: User | null = JSON.parse(localStorage.getItem('mindcare-user') || 'null');
+     if (storedUser && (storedUser.email === authIdentifier || storedUser.phone === authIdentifier || storedUser.pseudonym === authIdentifier)) {
+       setUser(storedUser);
+       setAuthStep('auth');
+       setAuthIdentifier('');
+    } else {
+        alert("Erreur lors de la vérification. Veuillez vous reconnecter.");
+        setAuthStep('auth');
+    }
+  };
+
   const handleProfileCreation = (pseudonym: string) => {
-    setUser({ id: authIdentifier, pseudonym });
-    // Reset auth flow state for next login
+    if (!tempSignupData) return;
+    
+    const newUser: User = {
+        ...tempSignupData,
+        id: tempSignupData.email,
+        pseudonym: pseudonym,
+    };
+    
+    setUser(newUser);
     setAuthStep('auth');
-    setAuthIdentifier('');
-    setShowLanding(true); // Show landing next time they log out
+    setTempSignupData(null);
+    setShowLanding(true);
   };
 
   const handleLogout = () => {
     setUser(null);
     setAuthStep('auth');
     setShowLanding(true);
-    // Clear all user-specific data
-    localStorage.removeItem('mindcare-user');
-    localStorage.removeItem('mindcare-chat-history');
-    localStorage.removeItem('mindcare-journal-entries');
+    // Keep user data for next login, but clear sensitive session data if any
+    // localStorage.removeItem('mindcare-chat-history');
+    // localStorage.removeItem('mindcare-journal-entries');
   };
 
   if (!user) {
@@ -85,13 +113,13 @@ const App: React.FC = () => {
     }
     switch (authStep) {
       case 'auth':
-        return <AuthPage onSubmitIdentifier={handleIdentifierSubmit} />;
+        return <AuthPage onSignup={handleSignup} onLogin={handleLogin} />;
       case 'verify':
         return <VerificationScreen identifier={authIdentifier} onVerify={handleVerificationSuccess} />;
       case 'profile':
         return <CreateProfileScreen onCreateProfile={handleProfileCreation} />;
       default:
-         return <AuthPage onSubmitIdentifier={handleIdentifierSubmit} />;
+         return <AuthPage onSignup={handleSignup} onLogin={handleLogin} />;
     }
   }
 
