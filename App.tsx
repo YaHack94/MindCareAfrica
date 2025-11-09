@@ -37,7 +37,7 @@ const App: React.FC = () => {
   // Register Service Worker
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('./service-worker.js')
+      navigator.serviceWorker.register('/service-worker.js')
         .then(swReg => {
           console.log('Service Worker registered:', swReg);
         })

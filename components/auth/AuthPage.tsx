@@ -25,7 +25,7 @@ const countryCodes: { [key: string]: string } = {
 
 
 const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
-  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [mode, setMode] = useState<'signup' | 'login' | 'forgotPinIdentifier' | 'forgotPinConfirm'>('signup');
 
   // Signup fields
   const [firstName, setFirstName] = useState('');
@@ -39,6 +39,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
   // Login fields
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPin, setLoginPin] = useState('');
+  
+  // Reset fields
+  const [resetIdentifier, setResetIdentifier] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPin, setNewPin] = useState('');
 
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +58,47 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onLogin(loginIdentifier, loginPin);
+  };
+  
+  const handleRequestResetCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedUser: User | null = JSON.parse(localStorage.getItem('mindcare-user') || 'null');
+
+    if (storedUser && (storedUser.email === resetIdentifier || storedUser.phone === resetIdentifier)) {
+        alert("Un code de réinitialisation a été envoyé (pour la démo, utilisez '123456').");
+        setMode('forgotPinConfirm');
+    } else {
+        alert("Aucun compte trouvé avec cet identifiant.");
+    }
+  };
+  
+  const handleResetPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resetCode !== '123456') {
+        alert("Code de réinitialisation incorrect.");
+        return;
+    }
+    if (newPin.length < 4) {
+        alert("Le nouveau code PIN doit contenir au moins 4 chiffres.");
+        return;
+    }
+
+    const storedUser: User | null = JSON.parse(localStorage.getItem('mindcare-user') || 'null');
+
+    if (storedUser && (storedUser.email === resetIdentifier || storedUser.phone === resetIdentifier)) {
+        const updatedUser = { ...storedUser, pin: newPin };
+        localStorage.setItem('mindcare-user', JSON.stringify(updatedUser));
+        alert("Votre code PIN a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter.");
+        setLoginIdentifier(resetIdentifier); // Pre-fill login form
+        setLoginPin('');
+        setResetIdentifier('');
+        setResetCode('');
+        setNewPin('');
+        setMode('login');
+    } else {
+        alert("Une erreur s'est produite. Veuillez recommencer.");
+        setMode('forgotPinIdentifier');
+    }
   };
   
   const commonInputClass = "w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white";
@@ -113,6 +159,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
         <div>
             <label htmlFor="loginPin" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Code PIN</label>
             <input id="loginPin" type="password" required value={loginPin} onChange={e => setLoginPin(e.target.value)} className={commonInputClass} placeholder="••••" />
+             <div className="text-right mt-2">
+                <button
+                    type="button"
+                    onClick={() => setMode('forgotPinIdentifier')}
+                    className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                    Code PIN oublié ?
+                </button>
+            </div>
         </div>
         <div className="pt-2">
             <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-transform transform hover:scale-105">
@@ -125,6 +180,71 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
         </div>
     </form>
   );
+  
+    const renderForgotPinIdentifierForm = () => (
+    <form className="space-y-4" onSubmit={handleRequestResetCode}>
+        <div>
+            <label htmlFor="resetIdentifier" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email ou téléphone</label>
+            <input id="resetIdentifier" type="text" required value={resetIdentifier} onChange={e => setResetIdentifier(e.target.value)} className={commonInputClass} placeholder="Votre identifiant de compte" />
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Nous enverrons un code de réinitialisation à cet identifiant.
+            </p>
+        </div>
+        <div className="pt-2">
+            <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+              Envoyer le code
+            </button>
+        </div>
+    </form>
+  );
+  
+   const renderForgotPinConfirmForm = () => (
+    <form className="space-y-4" onSubmit={handleResetPin}>
+        <div>
+            <label htmlFor="resetCode" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Code de réinitialisation</label>
+            <input id="resetCode" type="text" maxLength={6} required value={resetCode} onChange={e => setResetCode(e.target.value)} className={commonInputClass} placeholder="Code à 6 chiffres" />
+             <p className="mt-2 text-xs text-center text-slate-500 dark:text-slate-400">
+              Pour la démo, utilisez le code : <strong>123456</strong>
+            </p>
+        </div>
+        <div>
+            <label htmlFor="newPin" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nouveau code PIN (4 chiffres min.)</label>
+            <input id="newPin" type="password" required value={newPin} onChange={e => setNewPin(e.target.value)} className={commonInputClass} placeholder="••••" />
+        </div>
+        <div className="pt-2">
+            <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+              Réinitialiser le code PIN
+            </button>
+        </div>
+    </form>
+  );
+
+  const getHeaderContent = () => {
+    switch(mode) {
+        case 'signup':
+            return { title: 'Créez votre compte pour commencer.', subtitle: null, showTabs: true };
+        case 'login':
+            return { title: 'Content de vous revoir !', subtitle: null, showTabs: true };
+        case 'forgotPinIdentifier':
+            return { title: 'Réinitialiser votre code PIN', subtitle: 'Entrez votre identifiant pour recevoir un code.', showTabs: false };
+        case 'forgotPinConfirm':
+            return { title: 'Vérifiez votre identité', subtitle: 'Entrez le code et votre nouveau code PIN.', showTabs: false };
+        default:
+            return { title: '', subtitle: null, showTabs: true };
+    }
+  };
+
+  const { title, subtitle, showTabs } = getHeaderContent();
+
+  const renderContent = () => {
+    switch(mode) {
+        case 'signup': return renderSignupForm();
+        case 'login': return renderLoginForm();
+        case 'forgotPinIdentifier': return renderForgotPinIdentifierForm();
+        case 'forgotPinConfirm': return renderForgotPinConfirmForm();
+        default: return renderLoginForm();
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 py-12">
@@ -134,20 +254,35 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
             MindCare<span className="text-slate-500 dark:text-slate-400">Africa</span>
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-300">
-            {mode === 'signup' ? 'Créez votre compte pour commencer.' : 'Content de vous revoir !'}
+            {title}
           </p>
+          {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
         </div>
 
-        <div className="flex justify-center bg-slate-100 dark:bg-slate-700 p-1 rounded-full">
-          <button onClick={() => setMode('signup')} className={`w-full py-2 rounded-full text-sm font-semibold transition-colors ${mode === 'signup' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}>
-            S'inscrire
-          </button>
-          <button onClick={() => setMode('login')} className={`w-full py-2 rounded-full text-sm font-semibold transition-colors ${mode === 'login' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}>
-            Se connecter
-          </button>
-        </div>
+        {showTabs && (
+            <div className="flex justify-center bg-slate-100 dark:bg-slate-700 p-1 rounded-full">
+            <button onClick={() => setMode('signup')} className={`w-full py-2 rounded-full text-sm font-semibold transition-colors ${mode === 'signup' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}>
+                S'inscrire
+            </button>
+            <button onClick={() => setMode('login')} className={`w-full py-2 rounded-full text-sm font-semibold transition-colors ${mode === 'login' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}>
+                Se connecter
+            </button>
+            </div>
+        )}
         
-        {mode === 'signup' ? renderSignupForm() : renderLoginForm()}
+        {renderContent()}
+
+        {(mode === 'forgotPinIdentifier' || mode === 'forgotPinConfirm') && (
+            <div className="text-center mt-4">
+                <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                    Retour à la connexion
+                </button>
+            </div>
+        )}
 
       </div>
     </div>

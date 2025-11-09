@@ -1,4 +1,3 @@
-
 export type NavigationItem = 'dashboard' | 'chat' | 'journal' | 'resources' | 'community' | 'professionals';
 
 export interface User {
@@ -36,6 +35,7 @@ export interface Resource {
   description: string;
   imageUrl: string;
   source: string;
+  contentUrl?: string;
 }
 
 export interface ForumPost {
@@ -47,6 +47,7 @@ export interface ForumPost {
     date: string; // For sorting
     replies: number;
     category: 'Gestion du stress' | 'Petites victoires' | 'Relations' | 'Soutien';
+    isNew?: boolean; // For highlighting new/updated posts
 }
 
 export interface Psychologist {

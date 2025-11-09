@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Resource } from '../../types';
-import { Video, Mic, FileText, Star } from 'lucide-react';
+import { Video, Mic, FileText, Star, Download, Share2 } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
+// Updated resources with contentUrl for articles
 const resources: Resource[] = [
   {
     id: '1',
@@ -27,6 +28,7 @@ const resources: Resource[] = [
     description: 'Découvrez pourquoi bien dormir est crucial.',
     imageUrl: 'https://picsum.photos/seed/sleep/400/225',
     source: 'Blog de l\'Institut de Santé Mentale',
+    contentUrl: 'https://raw.githubusercontent.com/lorem-ipsum-generator/cli/main/README.md',
   },
     {
     id: '4',
@@ -35,6 +37,7 @@ const resources: Resource[] = [
     description: 'Apprenez des exercices simples et efficaces.',
     imageUrl: 'https://picsum.photos/seed/breathing/400/225',
     source: 'MindCare Africa Blog',
+    contentUrl: 'https://raw.githubusercontent.com/lorem-ipsum-generator/cli/main/LICENSE',
   },
 ];
 
@@ -47,19 +50,58 @@ const ResourceIcon = ({ type }: { type: Resource['type'] }) => {
     }
 }
 
-const ResourceCard: React.FC<{ resource: Resource; isFavorite: boolean; onToggleFavorite: () => void; }> = ({ resource, isFavorite, onToggleFavorite }) => {
+interface ResourceCardProps {
+    resource: Resource; 
+    isSaved: boolean; 
+    onToggleSave: () => void; 
+}
+
+const ResourceCard: React.FC<ResourceCardProps> = ({ resource, isSaved, onToggleSave }) => {
+    const isArticle = resource.type === 'article';
+    const ActionIcon = isArticle ? Download : Star;
+    const actionLabel = isArticle 
+        ? (isSaved ? 'Supprimer le téléchargement' : 'Télécharger pour consultation hors ligne')
+        : (isSaved ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    const savedColor = isArticle ? 'text-emerald-500 fill-emerald-500' : 'text-yellow-400 fill-yellow-400';
+
+    const handleShare = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: resource.title,
+                    text: resource.description,
+                    url: resource.contentUrl || window.location.href,
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        }
+    };
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden transition-transform transform hover:-translate-y-1 relative">
        <img src={resource.imageUrl} alt={resource.title} className="w-full h-40 object-cover" />
        
+       {navigator.share && (
+            <button 
+                onClick={handleShare}
+                className="absolute top-2 left-2 p-2 rounded-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-900 transition-colors z-10"
+                aria-label="Partager la ressource"
+                title="Partager la ressource"
+            >
+                <Share2 size={20} className="text-slate-600 dark:text-slate-300" />
+            </button>
+        )}
+
        <button 
-        onClick={onToggleFavorite}
+        onClick={onToggleSave}
         className="absolute top-2 right-2 p-2 rounded-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-900 transition-colors z-10"
-        aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        aria-label={actionLabel}
+        title={actionLabel}
       >
-        <Star 
+        <ActionIcon 
           size={20} 
-          className={`transition-all ${isFavorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-500 dark:text-slate-400'}`} 
+          className={`transition-all ${isSaved ? savedColor : 'text-slate-500 dark:text-slate-400'}`} 
         />
       </button>
 
@@ -78,21 +120,41 @@ const ResourceCard: React.FC<{ resource: Resource; isFavorite: boolean; onToggle
 
 const ResourcesPage: React.FC = () => {
   const [favoritedIds, setFavoritedIds] = useLocalStorage<string[]>('mindcare-favorite-resources-ids', []);
+  const [downloadedIds, setDownloadedIds] = useLocalStorage<string[]>('mindcare-downloaded-resources-ids', []);
   const [offlineResources, setOfflineResources] = useLocalStorage<Resource[]>('mindcare-offline-resources', []);
-  const [view, setView] = useState<'all' | 'favorites'>('all');
+  const [view, setView] = useState<'all' | 'offline'>('all');
 
-  const handleToggleFavorite = (resource: Resource) => {
-    const isFavorited = favoritedIds.includes(resource.id);
-    if (isFavorited) {
-      // Remove from favorites
-      setFavoritedIds(prevIds => prevIds.filter(id => id !== resource.id));
-      setOfflineResources(prevOffline => prevOffline.filter(r => r.id !== resource.id));
+  const handleToggleOffline = (resource: Resource) => {
+    const isOffline = offlineResources.some(r => r.id === resource.id);
+    const swController = navigator.serviceWorker.controller;
+
+    if (isOffline) {
+      // Remove from offline lists and cache
+      setOfflineResources(prev => prev.filter(r => r.id !== resource.id));
+      if (resource.type === 'article') {
+        setDownloadedIds(prev => prev.filter(id => id !== resource.id));
+        if (swController && resource.contentUrl) {
+          swController.postMessage({ type: 'DELETE_RESOURCE', url: resource.contentUrl });
+        }
+      } else {
+        setFavoritedIds(prev => prev.filter(id => id !== resource.id));
+      }
     } else {
-      // Add to favorites
-      setFavoritedIds(prevIds => [...prevIds, resource.id]);
-      setOfflineResources(prevOffline => [...prevOffline, resource]);
+      // Add to offline lists and cache
+      setOfflineResources(prev => [...prev, resource]);
+      if (resource.type === 'article') {
+        setDownloadedIds(prev => [...prev, resource.id]);
+        if (swController && resource.contentUrl) {
+          swController.postMessage({ type: 'CACHE_RESOURCE', url: resource.contentUrl });
+          // In a real app, you might show a toast notification here.
+          console.log(`Requesting cache for: ${resource.contentUrl}`);
+        }
+      } else {
+        setFavoritedIds(prev => [...prev, resource.id]);
+      }
     }
   };
+
 
   const resourcesToShow = view === 'all' ? resources : offlineResources;
 
@@ -109,19 +171,19 @@ const ResourcesPage: React.FC = () => {
             Toutes
           </button>
           <button
-            onClick={() => setView('favorites')}
-            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'favorites' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}
+            onClick={() => setView('offline')}
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'offline' ? 'bg-white dark:bg-slate-800 shadow text-emerald-600' : 'text-slate-500'}`}
           >
-            Favoris
+            Hors ligne
           </button>
         </div>
       </div>
       
-      {view === 'favorites' && resourcesToShow.length === 0 && (
+      {view === 'offline' && resourcesToShow.length === 0 && (
         <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-lg">
-            <Star size={48} className="mx-auto text-slate-400 dark:text-slate-500" />
-            <h2 className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-200">Aucun favori pour le moment</h2>
-            <p className="mt-2 text-slate-500 dark:text-slate-400">Cliquez sur l'étoile sur une ressource pour l'ajouter ici et y accéder hors ligne.</p>
+            <Download size={48} className="mx-auto text-slate-400 dark:text-slate-500" />
+            <h2 className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-200">Aucun contenu hors ligne</h2>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Cliquez sur l'étoile ou l'icône de téléchargement sur une ressource pour l'ajouter ici.</p>
         </div>
       )}
 
@@ -130,8 +192,12 @@ const ResourcesPage: React.FC = () => {
           <ResourceCard 
             key={resource.id} 
             resource={resource}
-            isFavorite={favoritedIds.includes(resource.id)}
-            onToggleFavorite={() => handleToggleFavorite(resource)}
+            isSaved={
+              resource.type === 'article'
+              ? downloadedIds.includes(resource.id)
+              : favoritedIds.includes(resource.id)
+            }
+            onToggleSave={() => handleToggleOffline(resource)}
           />
         ))}
       </div>

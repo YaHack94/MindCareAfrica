@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ForumPost } from '../../types';
 import { MessageSquare, Search, TrendingUp, Clock } from 'lucide-react';
 
-const forumPosts: ForumPost[] = [
+const initialPosts: ForumPost[] = [
     {
         id: '1',
         author: 'Soleil_Calme',
@@ -46,12 +46,15 @@ const forumPosts: ForumPost[] = [
     },
 ];
 
-const categories = ['Toutes', ...Array.from(new Set(forumPosts.map(p => p.category)))];
-
+const categories = ['Toutes', ...Array.from(new Set(initialPosts.map(p => p.category)))];
 
 const ForumPostCard: React.FC<{ post: ForumPost }> = ({ post }) => {
+    const highlightClass = post.isNew 
+        ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-200 dark:ring-emerald-800'
+        : 'bg-white dark:bg-slate-800';
+
     return (
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow animate-fade-in">
+        <div className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-500 ${highlightClass}`}>
             <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 px-2 py-1 rounded-full">{post.category}</span>
             <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-200 mt-3">{post.title}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{post.content}</p>
@@ -67,46 +70,95 @@ const ForumPostCard: React.FC<{ post: ForumPost }> = ({ post }) => {
 }
 
 const CommunityPage: React.FC = () => {
+    const [posts, setPosts] = useState<ForumPost[]>(initialPosts);
     const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('Toutes');
 
-    const filteredAndSortedPosts = useMemo(() => {
-        let posts = [...forumPosts];
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setPosts(currentPosts => {
+                const shouldAddNewPost = Math.random() < 0.2; // 20% chance to add a new post
 
-        // 1. Filter by category
+                if (shouldAddNewPost) {
+                    const newPost: ForumPost = {
+                        id: new Date().toISOString(),
+                        author: 'Utilisateur_Actif',
+                        title: 'Nouvelle discussion en direct !',
+                        content: 'Ceci est un exemple de nouvelle publication apparaissant en temps réel pour montrer la collaboration.',
+                        timestamp: 'À l\'instant',
+                        date: new Date().toISOString(),
+                        replies: 0,
+                        category: 'Soutien',
+                        isNew: true,
+                    };
+                    
+                    setTimeout(() => {
+                        setPosts(prev => prev.map(p => p.id === newPost.id ? { ...p, isNew: false } : p));
+                    }, 3000);
+
+                    return [newPost, ...currentPosts];
+                } else if (currentPosts.length > 0) {
+                    const postIndexToUpdate = Math.floor(Math.random() * currentPosts.length);
+                    const updatedPosts = [...currentPosts];
+                    const postToUpdate = { ...updatedPosts[postIndexToUpdate] };
+                    
+                    postToUpdate.replies += 1;
+                    postToUpdate.timestamp = 'À l\'instant';
+                    postToUpdate.isNew = true;
+                    updatedPosts[postIndexToUpdate] = postToUpdate;
+
+                     setTimeout(() => {
+                        setPosts(prev => prev.map(p => p.id === postToUpdate.id ? { ...p, isNew: false } : p));
+                    }, 3000);
+
+                    return updatedPosts;
+                }
+                
+                return currentPosts;
+            });
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const filteredAndSortedPosts = useMemo(() => {
+        let processedPosts = [...posts];
+
         if (selectedCategory !== 'Toutes') {
-            posts = posts.filter(p => p.category === selectedCategory);
+            processedPosts = processedPosts.filter(p => p.category === selectedCategory);
         }
 
-        // 2. Filter by search term
         if (searchTerm.trim() !== '') {
-            posts = posts.filter(p =>
+            processedPosts = processedPosts.filter(p =>
                 p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.content.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
-        // 3. Sort
         if (sortBy === 'latest') {
-            posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            processedPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         } else if (sortBy === 'popular') {
-            posts.sort((a, b) => b.replies - a.replies);
+            processedPosts.sort((a, b) => b.replies - a.replies);
         }
 
-        return posts;
-    }, [sortBy, searchTerm, selectedCategory]);
+        return processedPosts;
+    }, [posts, sortBy, searchTerm, selectedCategory]);
 
     return (
         <div>
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-200">Forums de discussion</h1>
-                <p className="text-slate-600 dark:text-slate-400">Un espace d'échange anonyme et bienveillant.</p>
+            <div className="mb-6 flex justify-between items-center">
+                 <div>
+                    <h1 className="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-200">Forums de discussion</h1>
+                    <p className="text-slate-600 dark:text-slate-400">Un espace d'échange anonyme et bienveillant.</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">En direct</span>
+                </div>
             </div>
 
-            {/* Filter and Sort Controls */}
             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md mb-6 space-y-4">
-                 {/* Search Bar */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input 
@@ -118,7 +170,6 @@ const CommunityPage: React.FC = () => {
                     />
                 </div>
 
-                {/* Category Filters */}
                  <div>
                     <div className="flex flex-wrap gap-2">
                         {categories.map(category => (
@@ -129,7 +180,6 @@ const CommunityPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Sort Options */}
                 <div className="flex items-center justify-end space-x-2">
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Trier par:</span>
                     <button onClick={() => setSortBy('latest')} className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${sortBy === 'latest' ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
