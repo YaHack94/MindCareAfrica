@@ -1,4 +1,6 @@
+
 export type NavigationItem = 'dashboard' | 'chat' | 'journal' | 'resources' | 'community' | 'professionals';
+export type PublicView = 'home' | 'about' | 'subscription' | 'contact' | 'partner' | 'blog';
 
 export interface User {
   id: string; // email or phone number
@@ -10,6 +12,7 @@ export interface User {
   dob: string;
   country: string;
   pin: string; // NOTE: Storing PIN in plaintext is insecure. For demo purposes only.
+  isAnonymous?: boolean;
 }
 
 export interface Message {
@@ -56,4 +59,28 @@ export interface Psychologist {
   specialty: string;
   imageUrl: string;
   description: string;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  time: string; // "HH:MM" format
+  days: {
+    lundi: boolean;
+    mardi: boolean;
+    mercredi: boolean;
+    jeudi: boolean;
+    vendredi: boolean;
+    samedi: boolean;
+    dimanche: boolean;
+  };
+}
+
+export interface BlogPost {
+    id: string;
+    title: string;
+    excerpt: string;
+    imageUrl: string;
+    author: string;
+    date: string;
+    category: string;
 }

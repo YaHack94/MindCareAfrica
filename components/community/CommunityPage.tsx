@@ -1,7 +1,8 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ForumPost } from '../../types';
 import { MessageSquare, Search, TrendingUp, Clock } from 'lucide-react';
+import { useRealtimeForum } from '../../hooks/useLocalStorage';
 
 const initialPosts: ForumPost[] = [
     {
@@ -70,57 +71,10 @@ const ForumPostCard: React.FC<{ post: ForumPost }> = ({ post }) => {
 }
 
 const CommunityPage: React.FC = () => {
-    const [posts, setPosts] = useState<ForumPost[]>(initialPosts);
+    const { posts } = useRealtimeForum(initialPosts);
     const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('Toutes');
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setPosts(currentPosts => {
-                const shouldAddNewPost = Math.random() < 0.2; // 20% chance to add a new post
-
-                if (shouldAddNewPost) {
-                    const newPost: ForumPost = {
-                        id: new Date().toISOString(),
-                        author: 'Utilisateur_Actif',
-                        title: 'Nouvelle discussion en direct !',
-                        content: 'Ceci est un exemple de nouvelle publication apparaissant en temps réel pour montrer la collaboration.',
-                        timestamp: 'À l\'instant',
-                        date: new Date().toISOString(),
-                        replies: 0,
-                        category: 'Soutien',
-                        isNew: true,
-                    };
-                    
-                    setTimeout(() => {
-                        setPosts(prev => prev.map(p => p.id === newPost.id ? { ...p, isNew: false } : p));
-                    }, 3000);
-
-                    return [newPost, ...currentPosts];
-                } else if (currentPosts.length > 0) {
-                    const postIndexToUpdate = Math.floor(Math.random() * currentPosts.length);
-                    const updatedPosts = [...currentPosts];
-                    const postToUpdate = { ...updatedPosts[postIndexToUpdate] };
-                    
-                    postToUpdate.replies += 1;
-                    postToUpdate.timestamp = 'À l\'instant';
-                    postToUpdate.isNew = true;
-                    updatedPosts[postIndexToUpdate] = postToUpdate;
-
-                     setTimeout(() => {
-                        setPosts(prev => prev.map(p => p.id === postToUpdate.id ? { ...p, isNew: false } : p));
-                    }, 3000);
-
-                    return updatedPosts;
-                }
-                
-                return currentPosts;
-            });
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, []);
 
     const filteredAndSortedPosts = useMemo(() => {
         let processedPosts = [...posts];

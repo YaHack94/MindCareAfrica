@@ -3,6 +3,7 @@ import React from 'react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { JournalEntry, Mood } from '../../types';
 import { Smile, Frown, Meh, Laugh, Angry } from 'lucide-react';
+import MeditationReminder from '../reminders/MeditationReminder';
 
 const moodOptions: { mood: Mood; label: string; icon: React.ElementType, color: string }[] = [
   { mood: 'radieux', label: 'Radieux', icon: Laugh, color: 'text-yellow-400' },
@@ -91,6 +92,7 @@ const JournalPage: React.FC = () => {
 
     return (
         <div>
+            <MeditationReminder />
             <MoodTracker onAddEntry={addEntry} />
             <JournalList entries={entries} />
         </div>

@@ -1,5 +1,5 @@
-
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
+import { Message } from '../types';
 
 const API_KEY = process.env.API_KEY;
 
@@ -24,15 +24,20 @@ When interacting via voice, maintain a natural, conversational pace.
 Keep your responses concise and easy to understand. Use emojis where appropriate to convey warmth and empathy. 💖✨🙏
 `;
 
-export const getAIResponse = async (prompt: string): Promise<string> => {
+export const getAIResponse = async (history: Message[]): Promise<string> => {
   if (!API_KEY) {
     return Promise.resolve("Bonjour! It seems my connection is offline right now, but I'm still here to listen. How are you feeling today?");
   }
   
+  const contents = history.map(msg => ({
+    role: msg.sender === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.text }]
+  }));
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: contents,
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.7,
@@ -45,4 +50,60 @@ export const getAIResponse = async (prompt: string): Promise<string> => {
     console.error("Error fetching AI response:", error);
     return "Je suis désolé, je rencontre un petit problème technique pour le moment. Pourrions-nous essayer de parler d'autre chose ou réessayer plus tard? Je suis là pour toi.";
   }
+};
+
+export const getAIAudioResponse = async (text: string): Promise<string | null> => {
+    if (!API_KEY) {
+        return null;
+    }
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        // Use a high-quality, calm voice for the AI companion
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }
+                    }
+                }
+            }
+        });
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        return base64Audio || null;
+    } catch (error) {
+        console.error("Error fetching AI audio response:", error);
+        return null;
+    }
+};
+
+export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
+    if (!API_KEY) {
+        return Promise.reject("API key not configured.");
+    }
+
+    try {
+        const audioPart = {
+            inlineData: {
+                mimeType,
+                data: base64Audio,
+            },
+        };
+
+        const textPart = {
+            text: "Transcrivez cet enregistrement audio en français.",
+        };
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [audioPart, textPart] },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error transcribing audio:", error);
+        // Return a user-friendly error message in the desired language
+        return "Désolé, je n'ai pas pu comprendre l'audio. Pourriez-vous réessayer ?";
+    }
 };

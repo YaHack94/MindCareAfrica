@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
 import { User } from '../../types';
-import { Fingerprint } from 'lucide-react';
+import { Fingerprint, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 interface AuthPageProps {
-  onSignup: (data: Omit<User, 'id' | 'pseudonym'>) => void;
+  onSignup: (data: Omit<User, 'id' | 'pseudonym' | 'isAnonymous'>) => void;
   onLogin: (identifier: string, pin: string) => void;
+  onAnonymousSignup: (pseudonym: string, pin: string) => void;
+  onBackToHome: () => void;
 }
 
 const countries = [
@@ -24,8 +26,8 @@ const countryCodes: { [key: string]: string } = {
 };
 
 
-const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
-  const [mode, setMode] = useState<'signup' | 'login' | 'forgotPinIdentifier' | 'forgotPinConfirm'>('signup');
+const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin, onAnonymousSignup, onBackToHome }) => {
+  const [mode, setMode] = useState<'signup' | 'login' | 'forgotPinIdentifier' | 'forgotPinConfirm' | 'anonymous'>('signup');
 
   // Signup fields
   const [firstName, setFirstName] = useState('');
@@ -45,6 +47,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
   const [resetCode, setResetCode] = useState('');
   const [newPin, setNewPin] = useState('');
 
+  // Anonymous fields
+  const [anonymousPseudonym, setAnonymousPseudonym] = useState('');
+  const [anonymousPin, setAnonymousPin] = useState('');
+
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin.length < 4) {
@@ -58,6 +64,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onLogin(loginIdentifier, loginPin);
+  };
+
+  const handleAnonymousSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (anonymousPseudonym.trim().length < 3) {
+        alert('Le pseudonyme doit contenir au moins 3 caractères.');
+        return;
+    }
+    if (anonymousPin.length < 4) {
+        alert('Le code PIN doit contenir au moins 4 chiffres.');
+        return;
+    }
+    onAnonymousSignup(anonymousPseudonym.trim(), anonymousPin);
   };
   
   const handleRequestResetCode = (e: React.FormEvent) => {
@@ -180,6 +199,50 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
         </div>
     </form>
   );
+
+  const renderAnonymousForm = () => (
+    <form className="space-y-4" onSubmit={handleAnonymousSubmit}>
+        <div>
+            <label htmlFor="anonymousPseudonym" className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                Choisissez un pseudonyme
+            </label>
+            <input 
+                id="anonymousPseudonym" 
+                type="text" 
+                required 
+                value={anonymousPseudonym} 
+                onChange={e => setAnonymousPseudonym(e.target.value)} 
+                className={commonInputClass}
+                placeholder="Ex: CœurVaillant" 
+            />
+             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Ce nom garantit votre anonymat dans l'application.
+            </p>
+        </div>
+        <div>
+            <label htmlFor="anonymousPin" className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                Créez un code PIN (4 chiffres min.)
+            </label>
+            <input 
+                id="anonymousPin" 
+                type="password" 
+                required 
+                value={anonymousPin} 
+                onChange={e => setAnonymousPin(e.target.value)} 
+                className={commonInputClass}
+                placeholder="••••"
+            />
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Pour vous reconnecter à votre session anonyme plus tard.
+            </p>
+        </div>
+        <div>
+            <button type="submit" className="w-full mt-2 flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-transform transform hover:scale-105">
+            Entrer dans l'espace
+            </button>
+        </div>
+    </form>
+  );
   
     const renderForgotPinIdentifierForm = () => (
     <form className="space-y-4" onSubmit={handleRequestResetCode}>
@@ -225,6 +288,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
             return { title: 'Créez votre compte pour commencer.', subtitle: null, showTabs: true };
         case 'login':
             return { title: 'Content de vous revoir !', subtitle: null, showTabs: true };
+        case 'anonymous':
+            return { title: 'Accès Anonyme', subtitle: 'Vos données resteront sur cet appareil.', showTabs: false };
         case 'forgotPinIdentifier':
             return { title: 'Réinitialiser votre code PIN', subtitle: 'Entrez votre identifiant pour recevoir un code.', showTabs: false };
         case 'forgotPinConfirm':
@@ -240,6 +305,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
     switch(mode) {
         case 'signup': return renderSignupForm();
         case 'login': return renderLoginForm();
+        case 'anonymous': return renderAnonymousForm();
         case 'forgotPinIdentifier': return renderForgotPinIdentifierForm();
         case 'forgotPinConfirm': return renderForgotPinConfirmForm();
         default: return renderLoginForm();
@@ -247,9 +313,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 py-12">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg dark:bg-slate-800">
-        <div className="text-center">
+    <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg dark:bg-slate-800 relative">
+        <button onClick={onBackToHome} className="absolute top-4 left-4 text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400" aria-label="Retour à l'accueil">
+          <ArrowLeft size={24} />
+        </button>
+        <div className="text-center pt-6">
           <h1 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
             MindCare<span className="text-slate-500 dark:text-slate-400">Africa</span>
           </h1>
@@ -270,7 +339,32 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
             </div>
         )}
         
-        {renderContent()}
+        <div className="animate-fade-in">
+          {renderContent()}
+        </div>
+
+        {(mode === 'signup' || mode === 'login') && (
+          <>
+            <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-slate-300 dark:border-slate-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Ou</span>
+                </div>
+            </div>
+            <div>
+                <button 
+                    type="button" 
+                    onClick={() => setMode('anonymous')}
+                    className="w-full flex items-center justify-center py-2.5 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                >
+                    <ShieldCheck className="mr-2" size={20} />
+                    Continuer en mode anonyme
+                </button>
+            </div>
+          </>
+        )}
 
         {(mode === 'forgotPinIdentifier' || mode === 'forgotPinConfirm') && (
             <div className="text-center mt-4">
@@ -280,6 +374,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin }) => {
                     className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
                 >
                     Retour à la connexion
+                </button>
+            </div>
+        )}
+
+         {mode === 'anonymous' && (
+            <div className="text-center mt-4">
+                <button
+                    type="button"
+                    onClick={() => setMode('signup')}
+                    className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                    Retourner pour créer un compte complet
                 </button>
             </div>
         )}

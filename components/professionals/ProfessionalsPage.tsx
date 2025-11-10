@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Psychologist } from '../../types';
 
 const psychologists: Psychologist[] = [
@@ -26,6 +25,8 @@ const psychologists: Psychologist[] = [
     },
 ];
 
+const specialties = ['Tous', ...Array.from(new Set(psychologists.map(p => p.specialty)))];
+
 const PsychologistCard: React.FC<{ psychologist: Psychologist }> = ({ psychologist }) => {
     return (
         <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
@@ -43,14 +44,46 @@ const PsychologistCard: React.FC<{ psychologist: Psychologist }> = ({ psychologi
 }
 
 const ProfessionalsPage: React.FC = () => {
+    const [activeFilter, setActiveFilter] = useState('Tous');
+
+    const filteredPsychologists = useMemo(() => {
+        if (activeFilter === 'Tous') {
+            return psychologists;
+        }
+        return psychologists.filter(p => p.specialty === activeFilter);
+    }, [activeFilter]);
+
     return (
         <div>
             <h1 className="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-200">Parler à un professionnel</h1>
             <p className="text-slate-600 dark:text-slate-400 mb-6">Trouvez un psychologue certifié pour une consultation en ligne sécurisée.</p>
-            <div className="space-y-6">
-                {psychologists.map(pro => (
-                    <PsychologistCard key={pro.id} psychologist={pro} />
+
+            <div className="flex flex-wrap gap-2 mb-6">
+                {specialties.map(specialty => (
+                    <button
+                        key={specialty}
+                        onClick={() => setActiveFilter(specialty)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                            activeFilter === specialty
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                        }`}
+                    >
+                        {specialty}
+                    </button>
                 ))}
+            </div>
+
+            <div className="space-y-6">
+                {filteredPsychologists.length > 0 ? (
+                    filteredPsychologists.map(pro => (
+                        <PsychologistCard key={pro.id} psychologist={pro} />
+                    ))
+                ) : (
+                     <div className="text-center py-10 bg-white dark:bg-slate-800 rounded-lg">
+                        <p className="text-slate-500 dark:text-slate-400">Aucun professionnel ne correspond à votre filtre.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
