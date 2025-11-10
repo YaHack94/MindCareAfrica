@@ -1,5 +1,4 @@
-
-export type NavigationItem = 'dashboard' | 'chat' | 'journal' | 'resources' | 'community' | 'professionals';
+export type NavigationItem = 'dashboard' | 'chat' | 'livechat' | 'journal' | 'resources' | 'community' | 'professionals' | 'nearby';
 export type PublicView = 'home' | 'about' | 'subscription' | 'contact' | 'partner' | 'blog';
 
 export interface User {
@@ -27,6 +26,7 @@ export interface JournalEntry {
   date: string;
   mood: Mood;
   note: string;
+  reflection?: string;
 }
 
 export type Mood = 'radieux' | 'heureux' | 'neutre' | 'triste' | 'terrible';
@@ -83,4 +83,13 @@ export interface BlogPost {
     author: string;
     date: string;
     category: string;
+}
+
+export interface ConnectionRequest {
+  id: string;
+  fromUserId: string;
+  fromUserPseudonym: string;
+  toUserId: string;
+  toUserPseudonym: string;
+  status: 'pending' | 'accepted' | 'declined';
 }

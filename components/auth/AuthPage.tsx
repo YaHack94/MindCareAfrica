@@ -57,7 +57,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin, onAnonymousSignu
         alert('Le code PIN doit contenir au moins 4 chiffres.');
         return;
     }
-    const fullPhoneNumber = `${countryCodes[country] || ''}${phone}`;
+    // Custom validation for Benin phone numbers
+    if (country === 'Bénin') {
+        if (!phone.startsWith('01') || phone.length !== 10 || !/^\d+$/.test(phone)) {
+            alert('Pour le Bénin, le numéro de téléphone doit être composé de 10 chiffres et commencer par "01".');
+            return;
+        }
+    }
+
+    const fullPhoneNumber = country === 'Bénin' 
+        ? `+229${phone.slice(-8)}` // Use last 8 digits for a valid international number
+        : `${countryCodes[country] || ''}${phone}`;
+
     onSignup({ firstName, lastName, email, phone: fullPhoneNumber, dob, country, pin });
   };
   
@@ -150,7 +161,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignup, onLogin, onAnonymousSignu
                 <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-slate-400">
                     {countryCodes[country] || '+...'}
                 </span>
-                <input id="phone" type="tel" placeholder="61 23 45 67" required value={phone} onChange={e => setPhone(e.target.value)} className={`${commonInputClass} rounded-l-none`} />
+                <input id="phone" type="tel" placeholder={country === 'Bénin' ? "01 XX XX XX XX" : "XX XX XX XX"} required value={phone} onChange={e => setPhone(e.target.value)} className={`${commonInputClass} rounded-l-none`} />
             </div>
         </div>
         <div>

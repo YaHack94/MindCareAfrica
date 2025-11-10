@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Mic, StopCircle, Loader2 } from 'lucide-react';
+import { Send, Mic, StopCircle, Loader2, MessageSquare } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { getAIResponse, getAIAudioResponse, transcribeAudio } from '../../services/geminiService';
 import { Message } from '../../types';
@@ -34,12 +34,21 @@ async function decodeAudioData(
   return buffer;
 }
 
+const availableVoices = [
+  { id: 'Kore', name: 'Voix Calme (Féminine)' },
+  { id: 'Zephyr', name: 'Voix Douce (Féminine)' },
+  { id: 'Puck', name: 'Voix Amicale (Masculine)' },
+  { id: 'Charon', name: 'Voix Grave (Masculine)' },
+  { id: 'Fenrir', name: 'Voix Profonde (Masculine)' },
+];
+
 
 const ChatWindow: React.FC = () => {
   const [messages, setMessages] = useLocalStorage<Message[]>('mindcare-chat-history', []);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [micStatus, setMicStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
+  const [selectedVoice, setSelectedVoice] = useLocalStorage<string>('mindcare-chat-voice', 'Kore');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -76,7 +85,7 @@ const ChatWindow: React.FC = () => {
   const speak = useCallback(async (text: string) => {
     if (!outputAudioContextRef.current || !text) return;
 
-    const base64Audio = await getAIAudioResponse(text);
+    const base64Audio = await getAIAudioResponse(text, selectedVoice);
     if (base64Audio) {
       try {
         const audioData = decode(base64Audio);
@@ -94,7 +103,7 @@ const ChatWindow: React.FC = () => {
         console.error("Failed to decode or play AI audio:", error);
       }
     }
-  }, []);
+  }, [selectedVoice]);
 
   const handleSend = useCallback(async (text: string) => {
     const textToSend = text.trim();
@@ -236,6 +245,25 @@ const ChatWindow: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] sm:h-[calc(100vh-6rem)] bg-white dark:bg-slate-800 rounded-lg shadow-md">
+       <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0">
+        <div className="flex items-center">
+            <MessageSquare size={20} className="text-emerald-600 dark:text-emerald-400 mr-3" />
+            <h2 className="font-semibold text-lg">Conversation avec Mindy</h2>
+        </div>
+        <div>
+            <label htmlFor="voice-select" className="sr-only">Choisir une voix</label>
+            <select
+                id="voice-select"
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value)}
+                className="bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md text-sm p-1.5 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+                {availableVoices.map(voice => (
+                    <option key={voice.id} value={voice.id}>{voice.name}</option>
+                ))}
+            </select>
+        </div>
+      </div>
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {messages.map((msg) => (

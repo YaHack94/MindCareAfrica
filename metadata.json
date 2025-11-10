@@ -2,6 +2,7 @@
   "name": "MindCare Africa",
   "description": "A mental health support SaaS for Africa, featuring an empathetic AI, anonymous community spaces, and offline-accessible wellness resources. Designed as a Progressive Web App for maximum accessibility.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }

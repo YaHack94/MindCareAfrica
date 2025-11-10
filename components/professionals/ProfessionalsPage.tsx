@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Psychologist } from '../../types';
+import { getGroundedResponseWithMaps } from '../../services/geminiService';
+import { Search, Loader2, MapPin, ExternalLink } from 'lucide-react';
+import { GenerateContentResponse } from '@google/genai';
 
 const psychologists: Psychologist[] = [
     {
@@ -43,6 +46,99 @@ const PsychologistCard: React.FC<{ psychologist: Psychologist }> = ({ psychologi
     )
 }
 
+const GroundedSearch: React.FC = () => {
+    const [query, setQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [response, setResponse] = useState<GenerateContentResponse | null>(null);
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!query.trim()) return;
+
+        setIsLoading(true);
+        setError(null);
+        setResponse(null);
+
+        if (!navigator.geolocation) {
+            setError("La géolocalisation n'est pas supportée par votre navigateur.");
+            setIsLoading(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const result = await getGroundedResponseWithMaps(query, { latitude, longitude });
+                    setResponse(result);
+                } catch (err: any) {
+                    setError(err.message || "Une erreur est survenue lors de la recherche.");
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            (geoError) => {
+                setError(`Erreur de géolocalisation : ${geoError.message}. Veuillez autoriser l'accès à votre position.`);
+                setIsLoading(false);
+            }
+        );
+    };
+
+    const groundingChunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks;
+
+    return (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center">
+                <MapPin className="mr-2 text-emerald-500"/>
+                Qui peut m'aider près de chez moi ?
+            </h2>
+            <form onSubmit={handleSearch}>
+                <div className="flex gap-2">
+                    <input 
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="'psychologues près de moi', 'soutien anxiété'..."
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <button type="submit" disabled={isLoading} className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:bg-slate-400 flex items-center justify-center w-28">
+                        {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
+                    </button>
+                </div>
+            </form>
+            {error && <p className="text-rose-500 mt-4">{error}</p>}
+            {response && (
+                <div className="mt-6">
+                    <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{response.text}</p>
+                     {groundingChunks && groundingChunks.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <h4 className="font-semibold text-slate-800 dark:text-slate-200">Sources :</h4>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                                {groundingChunks.map((chunk, index) => (
+                                    chunk.maps && (
+                                        <li key={index} className="text-sm">
+                                            <a 
+                                                href={chunk.maps.uri} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center"
+                                            >
+                                                {chunk.maps.title}
+                                                <ExternalLink size={12} className="ml-1.5" />
+                                            </a>
+                                        </li>
+                                    )
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
 const ProfessionalsPage: React.FC = () => {
     const [activeFilter, setActiveFilter] = useState('Tous');
 
@@ -55,8 +151,10 @@ const ProfessionalsPage: React.FC = () => {
 
     return (
         <div>
+            <GroundedSearch />
+
             <h1 className="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-200">Parler à un professionnel</h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">Trouvez un psychologue certifié pour une consultation en ligne sécurisée.</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">Trouvez un psychologue certifié de notre réseau pour une consultation en ligne sécurisée.</p>
 
             <div className="flex flex-wrap gap-2 mb-6">
                 {specialties.map(specialty => (

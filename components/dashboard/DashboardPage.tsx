@@ -1,7 +1,7 @@
-
-import React from 'react';
-import { Bot, UserCheck, Users, Crown, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bot, MapPin, Users, Map, ArrowRight, Send, Loader2 } from 'lucide-react';
 import { NavigationItem } from '../../types';
+import { getQuickResponse } from '../../services/geminiService';
 
 interface DashboardPageProps {
   pseudonym: string;
@@ -16,6 +16,56 @@ interface DashboardCardProps {
   onClick: () => void;
   color: string;
   bgColor: string;
+}
+
+const QuickCheckIn: React.FC = () => {
+    const [input, setInput] = useState('');
+    const [response, setResponse] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+        
+        setIsLoading(true);
+        setResponse('');
+        try {
+            const aiResponse = await getQuickResponse(input);
+            setResponse(aiResponse);
+        } catch (error) {
+            setResponse("Désolé, une erreur est survenue. Mais je suis là pour vous écouter.");
+        } finally {
+            setIsLoading(false);
+            setInput('');
+        }
+    };
+    
+    return (
+        <div className="p-6 rounded-2xl shadow-lg bg-white dark:bg-slate-800">
+             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Bilan Express</h3>
+             <p className="text-slate-600 dark:text-slate-300 mt-2 text-sm">
+                 Comment vous sentez-vous en ce moment ? Partagez une pensée, une émotion.
+             </p>
+             <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+                <input 
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ex: 'Je suis un peu stressé...'"
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                    disabled={isLoading}
+                />
+                <button type="submit" disabled={isLoading || !input.trim()} className="p-2.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:bg-slate-400 flex items-center justify-center">
+                    {isLoading ? <Loader2 size={20} className="animate-spin"/> : <Send size={20} />}
+                </button>
+             </form>
+             {response && (
+                <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-900/40 rounded-md text-sm text-emerald-800 dark:text-emerald-300 animate-fade-in">
+                    <p><strong>Mindy :</strong> {response}</p>
+                </div>
+             )}
+        </div>
+    )
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({ title, description, icon: Icon, onClick, color, bgColor }) => (
@@ -65,6 +115,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ pseudonym, setActiveView,
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div className="md:col-span-2">
+            <QuickCheckIn />
+        </div>
         <DashboardCard
           title="Discuter avec Mindy"
           description="Votre compagnon IA est disponible 24/7 pour une conversation de soutien."
@@ -74,9 +127,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ pseudonym, setActiveView,
           color="bg-sky-500"
         />
         <DashboardCard
-          title="Parler à un expert"
-          description="Prenez rendez-vous avec un psychologue certifié pour une aide professionnelle."
-          icon={UserCheck}
+          title="Trouver une aide locale"
+          description="Recherchez des psychologues ou des centres de soutien près de chez vous."
+          icon={MapPin}
           onClick={() => setActiveView('professionals')}
           bgColor="bg-emerald-100 dark:bg-emerald-900/50"
           color="bg-emerald-500"
@@ -90,12 +143,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ pseudonym, setActiveView,
           color="bg-amber-500"
         />
         <DashboardCard
-          title="Gérer l'abonnement"
-          description="Accédez à des fonctionnalités premium et soutenez notre mission."
-          icon={Crown}
-          onClick={() => alert('La page d\'abonnement est en cours de construction.')}
-          bgColor="bg-purple-100 dark:bg-purple-900/50"
-          color="bg-purple-500"
+          title="Personnes à proximité"
+          description="Trouvez des membres de la communauté près de chez vous pour un soutien mutuel."
+          icon={Map}
+          onClick={() => setActiveView('nearby')}
+          bgColor="bg-teal-100 dark:bg-teal-900/50"
+          color="bg-teal-500"
         />
       </div>
     </div>

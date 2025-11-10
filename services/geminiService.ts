@@ -52,7 +52,7 @@ export const getAIResponse = async (history: Message[]): Promise<string> => {
   }
 };
 
-export const getAIAudioResponse = async (text: string): Promise<string | null> => {
+export const getAIAudioResponse = async (text: string, voiceName: string = 'Kore'): Promise<string | null> => {
     if (!API_KEY) {
         return null;
     }
@@ -65,7 +65,7 @@ export const getAIAudioResponse = async (text: string): Promise<string | null> =
                 speechConfig: {
                     voiceConfig: {
                         // Use a high-quality, calm voice for the AI companion
-                        prebuiltVoiceConfig: { voiceName: 'Kore' }
+                        prebuiltVoiceConfig: { voiceName }
                     }
                 }
             }
@@ -92,7 +92,7 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
         };
 
         const textPart = {
-            text: "Transcrivez cet enregistrement audio en français.",
+            text: "Veuillez transcrire l'audio suivant. Détectez la langue parlée et fournissez la transcription dans cette langue.",
         };
 
         const response = await ai.models.generateContent({
@@ -105,5 +105,73 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
         console.error("Error transcribing audio:", error);
         // Return a user-friendly error message in the desired language
         return "Désolé, je n'ai pas pu comprendre l'audio. Pourriez-vous réessayer ?";
+    }
+};
+
+export const getGroundedResponseWithMaps = async (query: string, location: { latitude: number, longitude: number }) => {
+    if (!API_KEY) {
+        return Promise.reject("API key not configured.");
+    }
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: query,
+            config: {
+                tools: [{ googleMaps: {} }],
+                toolConfig: {
+                    retrievalConfig: {
+                        latLng: {
+                            latitude: location.latitude,
+                            longitude: location.longitude
+                        }
+                    }
+                }
+            },
+        });
+        return response;
+    } catch (error) {
+        console.error("Error fetching grounded response:", error);
+        throw new Error("Impossible de trouver des informations locales pour le moment.");
+    }
+};
+
+export const getQuickResponse = async (prompt: string): Promise<string> => {
+    if (!API_KEY) {
+        return Promise.resolve("Merci d'avoir partagé cela. Je suis là pour vous écouter.");
+    }
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-flash-lite-latest',
+            contents: prompt,
+            config: {
+                 systemInstruction: "You are an AI companion. Your response must be under 25 words, be empathetic, and very fast. Acknowledge the user's feeling and offer a single sentence of encouragement in French.",
+                 temperature: 0.5,
+            },
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error fetching quick response:", error);
+        return "Merci de partager cela avec moi.";
+    }
+};
+
+
+export const getReflectiveResponse = async (journalEntry: string): Promise<string> => {
+    if (!API_KEY) {
+        return Promise.resolve("Merci d'avoir pris le temps d'écrire dans votre journal. C'est un excellent moyen de comprendre vos sentiments.");
+    }
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: journalEntry,
+            config: {
+                systemInstruction: "You are a thoughtful and insightful AI companion named Mindy. Your purpose is to analyze the following journal entry written in French. Provide a gentle, supportive, and reflective response, also in French. Identify potential patterns or underlying feelings without being prescriptive or offering medical advice. Your tone should be caring and encourage the user in their self-reflection journey. Keep the response to a few paragraphs.",
+                thinkingConfig: { thinkingBudget: 32768 }
+            },
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error fetching reflective response:", error);
+        return "Je vous remercie de votre confiance. Il est très courageux de mettre des mots sur ses émotions.";
     }
 };

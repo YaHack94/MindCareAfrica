@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import AuthPage from './components/auth/AuthPage';
@@ -20,6 +19,8 @@ import SubscriptionPage from './components/public/SubscriptionPage';
 import ContactPage from './components/public/ContactPage';
 import PartnerPage from './components/public/PartnerPage';
 import BlogPage from './components/public/BlogPage';
+import LiveChatPage from './components/livechat/LiveChatPage';
+import NearbyPage from './components/nearby/NearbyPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useLocalStorage<User | null>('mindcare-user', null);
@@ -48,7 +49,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/service-worker.js')
+      navigator.serviceWorker.register('./service-worker.js')
         .then(swReg => console.log('Service Worker registered:', swReg))
         .catch(error => console.error('Service Worker registration failed:', error));
     }
@@ -148,10 +149,12 @@ const App: React.FC = () => {
       switch (activeView) {
         case 'dashboard': return <DashboardPage pseudonym={user.pseudonym} setActiveView={setActiveView} isAnonymous={user.isAnonymous} />;
         case 'chat': return <ChatWindow />;
+        case 'livechat': return <LiveChatPage />;
         case 'journal': return <JournalPage />;
         case 'resources': return <ResourcesPage />;
         case 'community': return <CommunityPage />;
         case 'professionals': return <ProfessionalsPage />;
+        case 'nearby': return <NearbyPage />;
         default: return <DashboardPage pseudonym={user.pseudonym} setActiveView={setActiveView} isAnonymous={user.isAnonymous} />;
       }
     };

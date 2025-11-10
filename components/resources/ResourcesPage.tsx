@@ -70,11 +70,14 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, isSaved, onToggle
         e.stopPropagation();
         if (navigator.share) {
             try {
-                await navigator.share({
+                const shareData: ShareData = {
                     title: resource.title,
                     text: resource.description,
-                    url: resource.contentUrl || window.location.href,
-                });
+                };
+                if (resource.contentUrl) {
+                    shareData.url = resource.contentUrl;
+                }
+                await navigator.share(shareData);
             } catch (error) {
                 console.error('Error sharing:', error);
             }
@@ -229,7 +232,9 @@ const ResourcesPage: React.FC = () => {
         setArticleContent('');
 
         try {
-            const response = await fetch(resource.contentUrl);
+            // Using a CORS proxy to bypass potential fetch restrictions in sandboxed environments.
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(resource.contentUrl)}`;
+            const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error('La récupération du contenu de l\'article a échoué.');
             }

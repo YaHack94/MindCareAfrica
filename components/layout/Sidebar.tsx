@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, MessageSquare, HeartPulse, BookOpen, Users, Stethoscope } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, HeartPulse, BookOpen, Users, Stethoscope, Radio, Map } from 'lucide-react';
 import { NavigationItem } from '../../types';
 
 interface SidebarProps {
@@ -10,7 +10,9 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard },
-  { id: 'chat', label: 'Chat IA', icon: MessageSquare },
+  { id: 'chat', label: 'Chat IA (Texte)', icon: MessageSquare },
+  { id: 'livechat', label: 'Conversation IA', icon: Radio },
+  { id: 'nearby', label: 'Proche de moi', icon: Map },
   { id: 'journal', label: 'Journal', icon: HeartPulse },
   { id: 'resources', label: 'Ressources', icon: BookOpen },
   { id: 'community', label: 'Forum', icon: Users },
